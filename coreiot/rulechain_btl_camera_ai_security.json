@@ -1,0 +1,216 @@
+{
+  "ruleChain": {
+    "additionalInfo": {
+      "description": "BTL IoT – TV3. T12: tạo cảnh báo khi people_count > 0 trong khung giờ cấm; T13: gửi notification (chuông đỏ). Gán làm Default rule chain của Device profile 'Camera_AI'."
+    },
+    "name": "BTL Camera AI Security",
+    "type": "CORE",
+    "firstRuleNodeId": null,
+    "root": false,
+    "debugMode": false,
+    "configuration": null
+  },
+  "metadata": {
+    "firstNodeIndex": 0,
+    "nodes": [
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 60,
+          "layoutY": 300
+        },
+        "type": "org.thingsboard.rule.engine.filter.TbMsgTypeSwitchNode",
+        "name": "Phân loại bản tin",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "version": 0
+        }
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 360,
+          "layoutY": 150
+        },
+        "type": "org.thingsboard.rule.engine.telemetry.TbMsgTimeseriesNode",
+        "name": "Lưu Telemetry",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "defaultTTL": 0
+        }
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 360,
+          "layoutY": 300
+        },
+        "type": "org.thingsboard.rule.engine.telemetry.TbMsgAttributesNode",
+        "name": "Lưu Client Attributes",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scope": "CLIENT_SCOPE",
+          "notifyDevice": false
+        }
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 360,
+          "layoutY": 450
+        },
+        "type": "org.thingsboard.rule.engine.rpc.TbSendRPCRequestNode",
+        "name": "Gửi RPC xuống Gateway",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "timeoutInSeconds": 60
+        }
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 660,
+          "layoutY": 150
+        },
+        "type": "org.thingsboard.rule.engine.metadata.TbGetAttributesNode",
+        "name": "Đọc khung giờ cấm",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "tellFailureIfAbsent": false,
+          "fetchTo": "METADATA",
+          "clientAttributeNames": [],
+          "sharedAttributeNames": [],
+          "serverAttributeNames": [
+            "forbidden_start_hour",
+            "forbidden_end_hour"
+          ],
+          "latestTsKeyNames": [],
+          "getLatestValueWithTs": false
+        }
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 960,
+          "layoutY": 150
+        },
+        "type": "org.thingsboard.rule.engine.filter.TbJsFilterNode",
+        "name": "Có người trong khung giờ cấm?",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "// T12 – Có người xuất hiện trong khung giờ cấm?\n// Khung giờ cấm đọc từ Server attributes (forbidden_start_hour, forbidden_end_hour),\n// nếu chưa đặt thì dùng mặc định 22h -> 6h (giờ Việt Nam).\nvar count = Number(msg.people_count);\nif (isNaN(count)) { count = 0; }\n\nvar startH = parseInt(metadata.ss_forbidden_start_hour);\nvar endH = parseInt(metadata.ss_forbidden_end_hour);\nif (isNaN(startH)) { startH = 22; }\nif (isNaN(endH)) { endH = 6; }\n\n// metadata.ts = thời điểm đo (ts do Gateway gửi lên, mili-giây UTC)\nvar ts = parseInt(metadata.ts);\nif (isNaN(ts)) { ts = Date.now(); }\nvar hourVN = Math.floor(ts / 3600000 + 7) % 24;\n\nvar inForbidden;\nif (startH === endH) {\n    inForbidden = true;                                  // cấm cả ngày\n} else if (startH < endH) {\n    inForbidden = hourVN >= startH && hourVN < endH;     // vd 8h -> 17h\n} else {\n    inForbidden = hourVN >= startH || hourVN < endH;     // qua nửa đêm, vd 22h -> 6h\n}\n\nreturn count > 0 && inForbidden;\n",
+          "tbelScript": "// T12 – Có người xuất hiện trong khung giờ cấm?\n// Khung giờ cấm đọc từ Server attributes (forbidden_start_hour, forbidden_end_hour),\n// nếu chưa đặt thì dùng mặc định 22h -> 6h (giờ Việt Nam).\nvar count = Number(msg.people_count);\nif (isNaN(count)) { count = 0; }\n\nvar startH = parseInt(metadata.ss_forbidden_start_hour);\nvar endH = parseInt(metadata.ss_forbidden_end_hour);\nif (isNaN(startH)) { startH = 22; }\nif (isNaN(endH)) { endH = 6; }\n\n// metadata.ts = thời điểm đo (ts do Gateway gửi lên, mili-giây UTC)\nvar ts = parseInt(metadata.ts);\nif (isNaN(ts)) { ts = Date.now(); }\nvar hourVN = Math.floor(ts / 3600000 + 7) % 24;\n\nvar inForbidden;\nif (startH === endH) {\n    inForbidden = true;                                  // cấm cả ngày\n} else if (startH < endH) {\n    inForbidden = hourVN >= startH && hourVN < endH;     // vd 8h -> 17h\n} else {\n    inForbidden = hourVN >= startH || hourVN < endH;     // qua nửa đêm, vd 22h -> 6h\n}\n\nreturn count > 0 && inForbidden;\n"
+        }
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1260,
+          "layoutY": 60
+        },
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "Tạo cảnh báo xâm nhập",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "// Chi tiết cảnh báo hiển thị trên CoreIOT (Alarm details)\nvar details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n}\nvar count = Number(msg.people_count) || 0;\nvar ts = parseInt(metadata.ts);\nif (isNaN(ts)) { ts = Date.now(); }\ndetails.people_count = count;\ndetails.max_people = Math.max(Number(details.max_people) || 0, count);\ndetails.llm_alert = msg.llm_alert || details.llm_alert || '';\ndetails.anomaly_detected = msg.anomaly_detected;\ndetails.hour_vn = Math.floor(ts / 3600000 + 7) % 24;\ndetails.count_updates = (Number(details.count_updates) || 0) + 1;\nreturn details;\n",
+          "alarmDetailsBuildTbel": "// Chi tiết cảnh báo hiển thị trên CoreIOT (Alarm details)\nvar details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n}\nvar count = Number(msg.people_count) || 0;\nvar ts = parseInt(metadata.ts);\nif (isNaN(ts)) { ts = Date.now(); }\ndetails.people_count = count;\ndetails.max_people = Math.max(Number(details.max_people) || 0, count);\ndetails.llm_alert = msg.llm_alert || details.llm_alert || '';\ndetails.anomaly_detected = msg.anomaly_detected;\ndetails.hour_vn = Math.floor(ts / 3600000 + 7) % 24;\ndetails.count_updates = (Number(details.count_updates) || 0) + 1;\nreturn details;\n",
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": false,
+          "alarmType": "Xâm nhập ngoài giờ",
+          "severity": "CRITICAL",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": false,
+          "propagateToOwnerHierarchy": false,
+          "propagateToTenant": false,
+          "dynamicSeverity": false
+        }
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1260,
+          "layoutY": 260
+        },
+        "type": "org.thingsboard.rule.engine.action.TbClearAlarmNode",
+        "name": "Xoá cảnh báo xâm nhập",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "// Ghi lý do tự động xoá cảnh báo\nvar details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n}\ndetails.cleared_reason = 'Không còn người trong khung giờ cấm';\ndetails.people_count_at_clear = Number(msg.people_count) || 0;\nreturn details;\n",
+          "alarmDetailsBuildTbel": "// Ghi lý do tự động xoá cảnh báo\nvar details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n}\ndetails.cleared_reason = 'Không còn người trong khung giờ cấm';\ndetails.people_count_at_clear = Number(msg.people_count) || 0;\nreturn details;\n",
+          "alarmType": "Xâm nhập ngoài giờ"
+        }
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1560,
+          "layoutY": 60
+        },
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "Chuẩn bị nội dung thông báo",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "// T13 – Chuẩn bị biến cho mẫu thông báo (Notification template)\n// msg lúc này là đối tượng Alarm vừa được tạo; đưa thông tin cần hiển thị vào metadata\nvar d = msg.details || {};\nmetadata.people_count = String(d.people_count !== undefined ? d.people_count : '');\nmetadata.llm_alert = d.llm_alert ? String(d.llm_alert) : 'Phát hiện người trong khung giờ cấm';\nmetadata.alarm_type = String(msg.type || '');\nmetadata.alarm_severity = String(msg.severity || '');\nmetadata.hour_vn = String(d.hour_vn !== undefined ? d.hour_vn : '');\nreturn {msg: msg, metadata: metadata, msgType: msgType};\n",
+          "tbelScript": "// T13 – Chuẩn bị biến cho mẫu thông báo (Notification template)\n// msg lúc này là đối tượng Alarm vừa được tạo; đưa thông tin cần hiển thị vào metadata\nvar d = msg.details || {};\nmetadata.people_count = String(d.people_count !== undefined ? d.people_count : '');\nmetadata.llm_alert = d.llm_alert ? String(d.llm_alert) : 'Phát hiện người trong khung giờ cấm';\nmetadata.alarm_type = String(msg.type || '');\nmetadata.alarm_severity = String(msg.severity || '');\nmetadata.hour_vn = String(d.hour_vn !== undefined ? d.hour_vn : '');\nreturn {msg: msg, metadata: metadata, msgType: msgType};\n"
+        }
+      }
+    ],
+    "connections": [
+      {
+        "fromIndex": 0,
+        "toIndex": 1,
+        "type": "Post telemetry"
+      },
+      {
+        "fromIndex": 0,
+        "toIndex": 2,
+        "type": "Post attributes"
+      },
+      {
+        "fromIndex": 0,
+        "toIndex": 3,
+        "type": "RPC Request to Device"
+      },
+      {
+        "fromIndex": 1,
+        "toIndex": 4,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 4,
+        "toIndex": 5,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 5,
+        "toIndex": 6,
+        "type": "True"
+      },
+      {
+        "fromIndex": 5,
+        "toIndex": 7,
+        "type": "False"
+      },
+      {
+        "fromIndex": 6,
+        "toIndex": 8,
+        "type": "Created"
+      }
+    ],
+    "ruleChainConnections": null
+  }
+}

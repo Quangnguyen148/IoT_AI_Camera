@@ -1,0 +1,561 @@
+{
+  "title": "BTL IoT – Giám sát Camera AI",
+  "image": null,
+  "mobileHide": false,
+  "mobileOrder": null,
+  "configuration": {
+    "description": "T11 – Giám sát số người (YOLOv8 + Gemini) từ Camera_AI_01 qua BTL_PC_GATEWAY",
+    "widgets": {
+      "f312ea18-7a78-502c-b639-c40ee9fe5d98": {
+        "id": "f312ea18-7a78-502c-b639-c40ee9fe5d98",
+        "typeFullFqn": "system.cards.simple_card",
+        "isSystemType": true,
+        "bundleAlias": "cards",
+        "typeAlias": "simple_card",
+        "type": "latest",
+        "title": "Số người hiện tại",
+        "image": null,
+        "description": null,
+        "sizeX": 8,
+        "sizeY": 4,
+        "config": {
+          "showTitle": true,
+          "title": "Số người hiện tại",
+          "backgroundColor": "#1565c0",
+          "color": "rgba(255, 255, 255, 0.87)",
+          "padding": "16px",
+          "dropShadow": true,
+          "enableFullscreen": true,
+          "useDashboardTimewindow": true,
+          "showLegend": false,
+          "widgetStyle": {},
+          "titleStyle": {
+            "fontSize": "16px",
+            "fontWeight": 400
+          },
+          "actions": {},
+          "settings": {
+            "labelPosition": "top"
+          },
+          "datasources": [
+            {
+              "type": "entity",
+              "name": null,
+              "entityAliasId": "1c05c1fc-139f-5b76-ba60-21bfec81b0ab",
+              "filterId": null,
+              "dataKeys": [
+                {
+                  "name": "people_count",
+                  "type": "timeseries",
+                  "label": "Số người",
+                  "color": "#2196f3",
+                  "settings": {},
+                  "_hash": 0.242,
+                  "decimals": 0,
+                  "units": "người"
+                }
+              ]
+            }
+          ],
+          "units": "người",
+          "decimals": 0
+        },
+        "row": 0,
+        "col": 0
+      },
+      "b6f2f187-e573-5d3d-b04c-7eaa95d9719d": {
+        "id": "b6f2f187-e573-5d3d-b04c-7eaa95d9719d",
+        "typeFullFqn": "system.cards.simple_card",
+        "isSystemType": true,
+        "bundleAlias": "cards",
+        "typeAlias": "simple_card",
+        "type": "latest",
+        "title": "Trạng thái an ninh",
+        "image": null,
+        "description": null,
+        "sizeX": 8,
+        "sizeY": 4,
+        "config": {
+          "showTitle": true,
+          "title": "Trạng thái an ninh",
+          "backgroundColor": "#c62828",
+          "color": "rgba(255, 255, 255, 0.87)",
+          "padding": "16px",
+          "dropShadow": true,
+          "enableFullscreen": true,
+          "useDashboardTimewindow": true,
+          "showLegend": false,
+          "widgetStyle": {},
+          "titleStyle": {
+            "fontSize": "16px",
+            "fontWeight": 400
+          },
+          "actions": {},
+          "settings": {
+            "labelPosition": "top"
+          },
+          "datasources": [
+            {
+              "type": "entity",
+              "name": null,
+              "entityAliasId": "1c05c1fc-139f-5b76-ba60-21bfec81b0ab",
+              "filterId": null,
+              "dataKeys": [
+                {
+                  "name": "anomaly_detected",
+                  "type": "timeseries",
+                  "label": "AI phát hiện",
+                  "color": "#f44336",
+                  "settings": {},
+                  "_hash": 0.51,
+                  "usePostProcessing": true,
+                  "postFuncBody": "return (value === true || value === 'true') ? 'CÓ NGƯỜI' : 'Bình thường';"
+                }
+              ]
+            }
+          ]
+        },
+        "row": 0,
+        "col": 8
+      },
+      "7afde33e-1ce4-5f76-bbea-e1a1a4b03961": {
+        "id": "7afde33e-1ce4-5f76-bbea-e1a1a4b03961",
+        "typeFullFqn": "system.control_widgets.switch_control",
+        "isSystemType": true,
+        "bundleAlias": "control_widgets",
+        "typeAlias": "switch_control",
+        "type": "rpc",
+        "title": "Kích hoạt an ninh AI",
+        "image": null,
+        "description": null,
+        "sizeX": 8,
+        "sizeY": 4,
+        "config": {
+          "showTitle": true,
+          "title": "Kích hoạt an ninh AI",
+          "backgroundColor": "#ffffff",
+          "color": "rgba(0, 0, 0, 0.87)",
+          "padding": "8px",
+          "dropShadow": true,
+          "enableFullscreen": true,
+          "useDashboardTimewindow": true,
+          "showLegend": false,
+          "widgetStyle": {},
+          "titleStyle": {
+            "fontSize": "16px",
+            "fontWeight": 400
+          },
+          "actions": {},
+          "settings": {
+            "title": "Chế độ an ninh AI (set_ai_status)",
+            "showOnOffLabels": true,
+            "initialValue": true,
+            "retrieveValueMethod": "rpc",
+            "valueKey": "value",
+            "getValueMethod": "get_ai_status",
+            "parseValueFunction": "return data === true || data === 'true';",
+            "setValueMethod": "set_ai_status",
+            "convertValueFunction": "return value;",
+            "requestTimeout": 10000,
+            "requestPersistent": false
+          },
+          "datasources": [],
+          "targetDeviceAliases": [],
+          "targetDeviceAliasIds": [
+            "1c05c1fc-139f-5b76-ba60-21bfec81b0ab"
+          ],
+          "targetDevice": {
+            "type": "entity",
+            "entityAliasId": "1c05c1fc-139f-5b76-ba60-21bfec81b0ab"
+          }
+        },
+        "row": 0,
+        "col": 16
+      },
+      "896661b4-2ade-5049-85d0-2eae84fe3df9": {
+        "id": "896661b4-2ade-5049-85d0-2eae84fe3df9",
+        "typeFullFqn": "system.charts.basic_timeseries",
+        "isSystemType": true,
+        "bundleAlias": "charts",
+        "typeAlias": "basic_timeseries",
+        "type": "timeseries",
+        "title": "Lượng người theo thời gian",
+        "image": null,
+        "description": null,
+        "sizeX": 15,
+        "sizeY": 8,
+        "config": {
+          "showTitle": true,
+          "title": "Lượng người theo thời gian",
+          "backgroundColor": "#ffffff",
+          "color": "rgba(0, 0, 0, 0.87)",
+          "padding": "8px",
+          "dropShadow": true,
+          "enableFullscreen": true,
+          "useDashboardTimewindow": false,
+          "showLegend": true,
+          "widgetStyle": {},
+          "titleStyle": {
+            "fontSize": "16px",
+            "fontWeight": 400
+          },
+          "actions": {},
+          "settings": {
+            "shadowSize": 4,
+            "fontColor": "#545454",
+            "fontSize": 10,
+            "stack": false,
+            "smoothLines": false,
+            "tooltipIndividual": false,
+            "xaxis": {
+              "showLabels": true,
+              "color": "#545454"
+            },
+            "yaxis": {
+              "showLabels": true,
+              "color": "#545454",
+              "min": 0,
+              "tickDecimals": 0,
+              "title": "Số người"
+            },
+            "grid": {
+              "verticalLines": true,
+              "horizontalLines": true,
+              "outlineWidth": 1,
+              "color": "#545454",
+              "backgroundColor": null,
+              "tickColor": "#DDDDDD"
+            }
+          },
+          "datasources": [
+            {
+              "type": "entity",
+              "name": null,
+              "entityAliasId": "1c05c1fc-139f-5b76-ba60-21bfec81b0ab",
+              "filterId": null,
+              "dataKeys": [
+                {
+                  "name": "people_count",
+                  "type": "timeseries",
+                  "label": "Số người",
+                  "color": "#2196f3",
+                  "settings": {
+                    "showLines": true,
+                    "fillLines": true,
+                    "showPoints": true,
+                    "lineWidth": 2
+                  },
+                  "_hash": 0.242
+                }
+              ]
+            }
+          ],
+          "timewindow": {
+            "realtime": {
+              "realtimeType": 0,
+              "timewindowMs": 1800000,
+              "interval": 5000
+            },
+            "aggregation": {
+              "type": "NONE",
+              "limit": 25000
+            }
+          },
+          "legendConfig": {
+            "direction": "column",
+            "position": "bottom",
+            "showMin": true,
+            "showMax": true,
+            "showAvg": true,
+            "showTotal": false
+          }
+        },
+        "row": 4,
+        "col": 0
+      },
+      "96da9a1b-58e3-5bac-b460-568541e8b86c": {
+        "id": "96da9a1b-58e3-5bac-b460-568541e8b86c",
+        "typeFullFqn": "system.alarm_widgets.alarms_table",
+        "isSystemType": true,
+        "bundleAlias": "alarm_widgets",
+        "typeAlias": "alarms_table",
+        "type": "alarm",
+        "title": "Cảnh báo xâm nhập (RuleChain)",
+        "image": null,
+        "description": null,
+        "sizeX": 9,
+        "sizeY": 8,
+        "config": {
+          "showTitle": true,
+          "title": "Cảnh báo xâm nhập (RuleChain)",
+          "backgroundColor": "#ffffff",
+          "color": "rgba(0, 0, 0, 0.87)",
+          "padding": "8px",
+          "dropShadow": true,
+          "enableFullscreen": true,
+          "useDashboardTimewindow": false,
+          "showLegend": false,
+          "widgetStyle": {},
+          "titleStyle": {
+            "fontSize": "16px",
+            "fontWeight": 400
+          },
+          "actions": {},
+          "settings": {
+            "enableSelection": true,
+            "enableSearch": true,
+            "displayDetails": true,
+            "allowAcknowledgment": true,
+            "allowClear": true,
+            "displayPagination": true,
+            "defaultPageSize": 10,
+            "defaultSortOrder": "-createdTime",
+            "enableSelectColumnDisplay": true
+          },
+          "datasources": [],
+          "alarmSource": {
+            "type": "entity",
+            "name": null,
+            "entityAliasId": "1c05c1fc-139f-5b76-ba60-21bfec81b0ab",
+            "filterId": null,
+            "dataKeys": [
+              {
+                "name": "createdTime",
+                "type": "alarm",
+                "label": "Thời gian",
+                "color": "#2196f3",
+                "settings": {},
+                "_hash": 0.857
+              },
+              {
+                "name": "type",
+                "type": "alarm",
+                "label": "Loại",
+                "color": "#f44336",
+                "settings": {},
+                "_hash": 0.781
+              },
+              {
+                "name": "severity",
+                "type": "alarm",
+                "label": "Mức độ",
+                "color": "#ffc107",
+                "settings": {},
+                "_hash": 0.963
+              },
+              {
+                "name": "status",
+                "type": "alarm",
+                "label": "Trạng thái",
+                "color": "#607d8b",
+                "settings": {},
+                "_hash": 0.221
+              }
+            ]
+          },
+          "alarmSearchStatus": "ANY",
+          "alarmStatusList": [],
+          "alarmSeverityList": [],
+          "alarmTypeList": [],
+          "searchPropagatedAlarms": false,
+          "alarmFilterConfig": {
+            "statusList": [],
+            "severityList": [],
+            "typeList": [],
+            "searchPropagatedAlarms": false
+          },
+          "alarmsPollingInterval": 5,
+          "timewindow": {
+            "realtime": {
+              "realtimeType": 0,
+              "timewindowMs": 86400000,
+              "interval": 1000
+            }
+          }
+        },
+        "row": 4,
+        "col": 15
+      },
+      "26c30e2e-67db-5a13-b1dd-5caaa21054c9": {
+        "id": "26c30e2e-67db-5a13-b1dd-5caaa21054c9",
+        "typeFullFqn": "system.cards.timeseries_table",
+        "isSystemType": true,
+        "bundleAlias": "cards",
+        "typeAlias": "timeseries_table",
+        "type": "timeseries",
+        "title": "Lịch sử AI & cảnh báo LLM",
+        "image": null,
+        "description": null,
+        "sizeX": 24,
+        "sizeY": 7,
+        "config": {
+          "showTitle": true,
+          "title": "Lịch sử AI & cảnh báo LLM",
+          "backgroundColor": "#ffffff",
+          "color": "rgba(0, 0, 0, 0.87)",
+          "padding": "8px",
+          "dropShadow": true,
+          "enableFullscreen": true,
+          "useDashboardTimewindow": false,
+          "showLegend": false,
+          "widgetStyle": {},
+          "titleStyle": {
+            "fontSize": "16px",
+            "fontWeight": 400
+          },
+          "actions": {},
+          "settings": {
+            "showTimestamp": true,
+            "displayPagination": true,
+            "defaultPageSize": 10,
+            "enableSearch": true,
+            "hideEmptyLines": true
+          },
+          "datasources": [
+            {
+              "type": "entity",
+              "name": null,
+              "entityAliasId": "1c05c1fc-139f-5b76-ba60-21bfec81b0ab",
+              "filterId": null,
+              "dataKeys": [
+                {
+                  "name": "people_count",
+                  "type": "timeseries",
+                  "label": "Số người",
+                  "color": "#2196f3",
+                  "settings": {},
+                  "_hash": 0.242
+                },
+                {
+                  "name": "anomaly_detected",
+                  "type": "timeseries",
+                  "label": "Bất thường",
+                  "color": "#f44336",
+                  "settings": {},
+                  "_hash": 0.124
+                },
+                {
+                  "name": "llm_alert",
+                  "type": "timeseries",
+                  "label": "Cảnh báo LLM (Gemini)",
+                  "color": "#4caf50",
+                  "settings": {},
+                  "_hash": 0.473
+                }
+              ]
+            }
+          ],
+          "timewindow": {
+            "realtime": {
+              "realtimeType": 0,
+              "timewindowMs": 3600000,
+              "interval": 5000
+            },
+            "aggregation": {
+              "type": "NONE",
+              "limit": 500
+            }
+          }
+        },
+        "row": 12,
+        "col": 0
+      }
+    },
+    "states": {
+      "default": {
+        "name": "BTL IoT – Giám sát Camera AI",
+        "root": true,
+        "layouts": {
+          "main": {
+            "widgets": {
+              "f312ea18-7a78-502c-b639-c40ee9fe5d98": {
+                "sizeX": 8,
+                "sizeY": 4,
+                "row": 0,
+                "col": 0
+              },
+              "b6f2f187-e573-5d3d-b04c-7eaa95d9719d": {
+                "sizeX": 8,
+                "sizeY": 4,
+                "row": 0,
+                "col": 8
+              },
+              "7afde33e-1ce4-5f76-bbea-e1a1a4b03961": {
+                "sizeX": 8,
+                "sizeY": 4,
+                "row": 0,
+                "col": 16
+              },
+              "896661b4-2ade-5049-85d0-2eae84fe3df9": {
+                "sizeX": 15,
+                "sizeY": 8,
+                "row": 4,
+                "col": 0
+              },
+              "96da9a1b-58e3-5bac-b460-568541e8b86c": {
+                "sizeX": 9,
+                "sizeY": 8,
+                "row": 4,
+                "col": 15
+              },
+              "26c30e2e-67db-5a13-b1dd-5caaa21054c9": {
+                "sizeX": 24,
+                "sizeY": 7,
+                "row": 12,
+                "col": 0
+              }
+            },
+            "gridSettings": {
+              "backgroundColor": "#eceff1",
+              "columns": 24,
+              "margin": 10,
+              "outerMargin": true,
+              "backgroundSizeMode": "100%"
+            }
+          }
+        }
+      }
+    },
+    "entityAliases": {
+      "1c05c1fc-139f-5b76-ba60-21bfec81b0ab": {
+        "id": "1c05c1fc-139f-5b76-ba60-21bfec81b0ab",
+        "alias": "Camera_AI_01",
+        "filter": {
+          "type": "entityName",
+          "resolveMultiple": false,
+          "entityType": "DEVICE",
+          "entityNameFilter": "Camera_AI_01"
+        }
+      }
+    },
+    "filters": {},
+    "timewindow": {
+      "displayValue": "",
+      "selectedTab": 0,
+      "realtime": {
+        "realtimeType": 0,
+        "interval": 5000,
+        "timewindowMs": 1800000
+      },
+      "history": {
+        "historyType": 0,
+        "interval": 5000,
+        "timewindowMs": 3600000
+      },
+      "aggregation": {
+        "type": "NONE",
+        "limit": 25000
+      }
+    },
+    "settings": {
+      "stateControllerId": "entity",
+      "showTitle": true,
+      "showDashboardsSelect": true,
+      "showEntitiesSelect": true,
+      "showDashboardTimewindow": true,
+      "showDashboardExport": true,
+      "toolbarAlwaysOpen": true
+    }
+  },
+  "name": "BTL IoT – Giám sát Camera AI"
+}

@@ -1,0 +1,5 @@
+Subject:
+🚨 Xâm nhập ngoài giờ – ${deviceName}
+
+Message:
+Phát hiện ${people_count} người lúc ${hour_vn}h (khung giờ cấm). AI: ${llm_alert}

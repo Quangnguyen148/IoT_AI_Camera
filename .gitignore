@@ -1,0 +1,27 @@
+# Environment & Secrets
+.env
+.env.local
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Python cache & artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Local databases & runtime state
+*.db
+*.sqlite3
+gateway_config.json
+
+# IDE & OS cache files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

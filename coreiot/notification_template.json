@@ -1,0 +1,24 @@
+{
+  "name": "BTL – Cảnh báo xâm nhập ngoài giờ",
+  "notificationType": "RULE_NODE",
+  "configuration": {
+    "deliveryMethodsTemplates": {
+      "WEB": {
+        "method": "WEB",
+        "enabled": true,
+        "subject": "🚨 Xâm nhập ngoài giờ – ${deviceName}",
+        "body": "Phát hiện ${people_count} người lúc ${hour_vn}h (khung giờ cấm). AI: ${llm_alert}",
+        "additionalConfig": {
+          "icon": {
+            "enabled": true,
+            "icon": "notifications_active",
+            "color": "#D12730"
+          },
+          "actionButtonConfig": {
+            "enabled": false
+          }
+        }
+      }
+    }
+  }
+}
