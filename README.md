@@ -167,7 +167,7 @@ GATEWAY_ACCESS_TOKEN=NHAP_ACCESS_TOKEN_CUA_GATEWAY_TU_COREIOT
 # 2. CẤU HÌNH GATEWAY & EDGE AI (TV1 & TV2)
 # ==============================================================================
 GEMINI_API_KEY=AIzaSy...NHAP_API_KEY_CUA_GEMINI
-GEMINI_MODEL=gemini-2.0-flash
+GEMINI_MODEL=gemini-3.8-flash
 YOLO_MODEL_PATH=yolov8n.pt
 CAMERA_INDEX=0
 CONF_THRESHOLD=0.6
@@ -209,13 +209,13 @@ python tools/coreiot_setup.py --assign-only --forbidden 8 17
 #### Bước 3.1: Tạo Gateway (T15)
 1. Đăng nhập [app.coreiot.io](https://app.coreiot.io) → vào menu **Entities** → **Devices** → nhấn `+` (Add new device).
 2. Tên thiết bị: `BTL_PC_GATEWAY`.
-3. ✅ **Tích chọn "Is gateway"** *(Bắt buộc: nếu thiếu, Broker sẽ không nhận dạng Gateway API và không tự động sinh thiết bị con)*.
+3. **Tích chọn "Is gateway"** *(Bắt buộc: nếu thiếu, Broker sẽ không nhận dạng Gateway API và không tự động sinh thiết bị con)*.
 4. Bỏ tích *Overwrite activity time for connected device* → Nhấn **Add**.
 5. Mở thiết bị `BTL_PC_GATEWAY` vừa tạo → tab **Details** → nhấn **Copy access token** (hoặc xem tại *Manage credentials*) → dán vào `.env` (`GATEWAY_ACCESS_TOKEN=`).
 
 #### Bước 3.2: Cấu hình Rule Chain lọc khung giờ cấm & báo động (T12)
 1. Mở menu **Rule chains** → nhấn `+` → chọn **Import rule chain**.
-2. Chọn file [rulechain_btl_camera_ai_security.json](file:///c:/Users/quang/Downloads/filebaocao/iot/BTL_IoT_complete/BTL_IoT_Camera_AI/coreiot/rulechain_btl_camera_ai_security.json) trong thư mục `coreiot/` → Nhấn **Import**.
+2. Chọn file [rulechain_btl_camera_ai_security.json] trong thư mục `coreiot/` → Nhấn **Import**.
 3. Mở Rule Chain vừa import → nhấn **Apply changes** (biểu tượng tích ✔ ở góc dưới cùng bên phải).
 4. **Giải thích các node chính trong RuleChain:**
    - **Node 1 (message type switch):** Phân luồng bản tin. `Post telemetry` rẽ vào Node 2; `RPC Request to Device` rẽ vào Node 4.
@@ -241,15 +241,15 @@ python tools/coreiot_setup.py --assign-only --forbidden 8 17
 2. **Tạo bản mẫu thông báo (Template):** Mở **Templates** → `+ Add template`:
    - Name: `BTL – Cảnh báo xâm nhập ngoài giờ`
    - Type: `Rule node`
-   - Delivery method: ✅ Chọn **Web**
-   - Subject: `🚨 Xâm nhập ngoài giờ – ${deviceName}`
+   - Delivery method: Chọn **Web**
+   - Subject: `Xâm nhập ngoài giờ – ${deviceName}`
    - Message: `Phát hiện ${people_count} người lúc ${hour_vn}h (khung giờ cấm). AI: ${llm_alert}`
    - Icon: `notifications_active`, màu `#D12730` → **Add**.
 3. **Nối vào Rule Chain:** Mở lại Rule Chain `BTL Camera AI Security`, kéo node **send notification** vào cuối luồng, liên kết với Template và Recipients vừa tạo, nối từ nhánh `Success` của Node 9 sang Node Notification → **Apply changes**.
 
 #### Bước 3.5: Cấu hình Dashboard CoreIOT (T11)
 1. Mở menu **Dashboards** → nhấn `+` → **Import dashboard**.
-2. Chọn file [dashboard_btl_camera_ai.json](file:///c:/Users/quang/Downloads/filebaocao/iot/BTL_IoT_complete/BTL_IoT_Camera_AI/coreiot/dashboard_btl_camera_ai.json) trong thư mục `coreiot/` → Nhấn **Import**.
+2. Chọn file [dashboard_btl_camera_ai.json] trong thư mục `coreiot/` → Nhấn **Import**.
 3. Dashboard cung cấp đầy đủ các thành phần:
    - **Thẻ Số người hiện tại:** Hiển thị `people_count` thời gian thực.
    - **Thẻ Trạng thái an ninh:** Hiển thị cảnh báo khi `anomaly_detected = true`.
@@ -336,7 +336,7 @@ python -m unittest discover -s tests -v
 | **2** | Đứng trước Webcam ~2 giây (vượt qua 15 frame Quarantine) | Sau đúng chu kỳ 5s Causal Window: Streamlit UI và CoreIOT Dashboard cập nhật `people_count = 1`, `anomaly_detected = true`, bảng LLM hiện câu cảnh báo tiếng Việt từ Gemini. | TV1 + TV2 + T11 (Telemetry) |
 | **3** | Gạt **Công tắc an ninh AI** sang **OFF** trên CoreIOT Dashboard | Công tắc chuyển trạng thái tức thì không xoay vòng/timeout. Streamlit UI chuyển sang trạng thái "Tắt AI", webcam không tốn tài nguyên gọi Gemini, `people_count` trả về `0`. | T11 + T08 (RPC Điều khiển) |
 | **4** | Gạt lại sang **ON** | AI kích hoạt trở lại. Làm mới trang Dashboard CoreIOT vẫn giữ đúng trạng thái ON (nhờ RPC `get_ai_status`). | T11 + T08 (RPC Phản hồi) |
-| **5** | Đặt khung giờ cấm trùng giờ hiện tại (vd: `python tools/coreiot_setup.py --assign-only --forbidden 8 17`) và xuất hiện trước camera | Xuất hiện Alarm mức **Critical** loại `Xâm nhập ngoài giờ`. Quả chuông 🔔 góc trên CoreIOT báo đỏ và hiển thị chi tiết câu văn Gemini sinh ra. | T12 + T13 (Rule Chain & Alert) |
+| **5** | Đặt khung giờ cấm trùng giờ hiện tại (vd: `python tools/coreiot_setup.py --assign-only --forbidden 8 17`) và xuất hiện trước camera | Xuất hiện Alarm mức **Critical** loại `Xâm nhập ngoài giờ`. Quả chuông góc trên CoreIOT báo đỏ và hiển thị chi tiết câu văn Gemini sinh ra. | T12 + T13 (Rule Chain & Alert) |
 | **6** | Rời khỏi vùng quan sát của Webcam | Sau 5s, Alarm trên CoreIOT tự động chuyển sang trạng thái **Cleared**. | T12 (Tự động xóa cảnh báo) |
 
 > **Mẹo demo khi không có thiết bị/webcam:** Sử dụng công cụ giả lập `gateway_simulator.py`:
@@ -358,5 +358,5 @@ python -m unittest discover -s tests -v
 | **Không thấy `Camera_AI_01` tự sinh trên CoreIOT** | Gateway chưa được bật cờ `Is gateway`. | Mở thiết bị `BTL_PC_GATEWAY` trên CoreIOT, tích chọn **Is gateway**, lưu lại và khởi động lại `gateway_main.py`. |
 | **Camera báo lỗi "Waiting for Video Frame"** | Webcam bị phần mềm khác chiếm dụng hoặc sai `CAMERA_INDEX`. | Tắt các ứng dụng đang dùng webcam (Zoom, Teams, OBS) hoặc thử đổi `CAMERA_INDEX=1` trong `.env`. |
 | **Công tắc Switch Widget trên Cloud báo Timeout** | Switch gửi RPC trực tiếp tới Gateway thay vì `Camera_AI_01`, hoặc thiếu node `RPC Request to Device`. | Trong cấu hình Switch Widget, chọn Target Device là alias `Camera_AI_01`. Đảm bảo Rule Chain có node `rpc call request` nối từ nhánh `RPC Request to Device`. |
-| **Có Alarm nhưng không có thông báo chuông đỏ 🔔** | Chưa nối node `send notification` hoặc người nhận không chứa tài khoản đang đăng nhập. | Kiểm tra Notification Center: đảm bảo Recipients là `Tenant administrators` và template được liên kết chính xác trong Rule Chain. |
+| **Có Alarm nhưng không có thông báo chuông đỏ** | Chưa nối node `send notification` hoặc người nhận không chứa tài khoản đang đăng nhập. | Kiểm tra Notification Center: đảm bảo Recipients là `Tenant administrators` và template được liên kết chính xác trong Rule Chain. |
 | **Xung đột cổng `8000` hoặc `8501`** | Tiến trình cũ chưa dừng hoàn toàn. | Đổi cổng `WEBSERVER_PORT=8080` trong `.env` hoặc tắt tiến trình Python cũ trong Task Manager. |
