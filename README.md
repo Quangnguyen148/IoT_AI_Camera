@@ -328,7 +328,7 @@ python -m unittest discover -s tests -v
 
 ---
 
-## 6. Kịch bản kiểm thử End-to-End khi báo cáo & Demo
+## 6. Kịch bản chạy Demo
 
 | Bước | Thao tác thực hiện | Kết quả quan sát thực tế | Thành phần kiểm chứng |
 | :---: | :--- | :--- | :---: |
@@ -338,15 +338,6 @@ python -m unittest discover -s tests -v
 | **4** | Gạt lại sang **ON** | AI kích hoạt trở lại. Làm mới trang Dashboard CoreIOT vẫn giữ đúng trạng thái ON (nhờ RPC `get_ai_status`). | T11 + T08 (RPC Phản hồi) |
 | **5** | Đặt khung giờ cấm trùng giờ hiện tại (vd: `python tools/coreiot_setup.py --assign-only --forbidden 8 17`) và xuất hiện trước camera | Xuất hiện Alarm mức **Critical** loại `Xâm nhập ngoài giờ`. Quả chuông góc trên CoreIOT báo đỏ và hiển thị chi tiết câu văn Gemini sinh ra. | T12 + T13 (Rule Chain & Alert) |
 | **6** | Rời khỏi vùng quan sát của Webcam | Sau 5s, Alarm trên CoreIOT tự động chuyển sang trạng thái **Cleared**. | T12 (Tự động xóa cảnh báo) |
-
-> **Mẹo demo khi không có thiết bị/webcam:** Sử dụng công cụ giả lập `gateway_simulator.py`:
-> ```bash
-> # Giả lập 2 người lúc 23h đêm (rơi vào khung giờ cấm) -> Kích hoạt Alarm & Chuông đỏ
-> python tools/gateway_simulator.py --token <ACCESS_TOKEN> --people 2 --fake-hour 23 --count 3
->
-> # Giả lập 0 người -> Tự động Clear Alarm
-> python tools/gateway_simulator.py --token <ACCESS_TOKEN> --people 0 --fake-hour 23 --count 1
-> ```
 
 ---
 
