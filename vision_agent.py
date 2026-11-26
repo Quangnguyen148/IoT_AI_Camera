@@ -2,8 +2,6 @@
 vision_agent.py – Module phân tích hình ảnh Edge AI cho IoT Gateway
 ====================================================================
 
-Tác giả  : Edge AI Engineer
-Phiên bản: 1.0.0
 Mô tả    : Sử dụng YOLOv8n (ultralytics) + OpenCV để đếm người qua webcam,
             kết hợp Google Generative AI (gemini) sinh cảnh báo ngôn ngữ tự nhiên.
 
@@ -180,7 +178,7 @@ class _LLMCaller:
 
             self._client = genai.Client(
                 api_key=self._api_key,
-                http_options={"timeout": 8000},
+                http_options={"timeout": 15000},
                 )
             logger.info("Kết nối Google GenAI thành công (model=%s).", self._model_name)
             return True
