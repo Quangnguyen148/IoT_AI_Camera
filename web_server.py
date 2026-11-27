@@ -29,7 +29,8 @@ from state_store import StateStore
 
 
 class AIToggleRequest(BaseModel):
-    status: bool
+    status: bool | None = None
+    active: bool | None = None
 
 
 def _get_lan_ip() -> str:
@@ -128,8 +129,16 @@ def create_web_app(
         return JSONResponse(snap)
 
     @app.post("/api/ai/toggle")
-    def api_ai_toggle(payload: AIToggleRequest):
-        set_ai_status_fn(payload.status)
+    def api_ai_toggle(payload: AIToggleRequest | None = None):
+        current_status = bool(get_ai_status_fn())
+        if payload is not None and payload.active is not None:
+            target_status = bool(payload.active)
+        elif payload is not None and payload.status is not None:
+            target_status = bool(payload.status)
+        else:
+            target_status = not current_status
+
+        set_ai_status_fn(target_status)
         actual = bool(get_ai_status_fn())
         return JSONResponse({"ok": True, "ai_active": actual})
 

@@ -69,6 +69,10 @@ class AIPayloadSchema(BaseModel):
         default="",
         description="Thông điệp cảnh báo từ LLM",
     )
+    ai_active: bool = Field(
+        default=True,
+        description="Trạng thái kích hoạt của module Edge AI",
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -347,6 +351,43 @@ class VisionAgent:
         """
         return self.is_active
 
+    def update_config(
+        self,
+        conf_threshold: float | None = None,
+        quarantine_frames: int | None = None,
+        causal_window_sec: float | None = None,
+        gemini_api_key: str | None = None,
+        gemini_model: str | None = None,
+    ) -> None:
+        """Cập nhật thông số AI an toàn (thread-safe) mà không gây deadlock hoặc nghẽn inference loop.
+
+        Args:
+            conf_threshold:    Ngưỡng confidence mới cho Quarantine Tracker.
+            quarantine_frames: Số frame liên tục tối thiểu cho Quarantine Tracker.
+            causal_window_sec: Thời gian cửa sổ Causal Window (giây).
+            gemini_api_key:    API key Gemini mới (nếu có).
+            gemini_model:      Model Gemini mới (nếu có).
+        """
+        with self._lock:
+            if causal_window_sec is not None:
+                self._causal_window_sec = float(causal_window_sec)
+            if conf_threshold is not None:
+                self._quarantine._conf_threshold = float(conf_threshold)
+            if quarantine_frames is not None:
+                self._quarantine._min_frames = int(quarantine_frames)
+            if gemini_model is not None:
+                self._llm._model_name = gemini_model
+            if gemini_api_key:
+                self._llm._api_key = gemini_api_key
+                self._llm._client = None
+        logger.info(
+            "Cập nhật cấu hình VisionAgent thành công: conf=%.2f | quarantine=%d | window=%.1fs | model=%s",
+            self._quarantine._conf_threshold,
+            self._quarantine._min_frames,
+            self._causal_window_sec,
+            self._llm._model_name,
+        )
+
     def get_latest_frame(self) -> np.ndarray | None:
         """Trả về frame mới nhất (đã đọc từ webcam) cho Local Webserver T07.
 
@@ -418,7 +459,7 @@ class VisionAgent:
                     if elapsed >= self._causal_window_sec:
                         # Yield payload trống khi đang PAUSED
                         logger.debug("PAUSED – yield payload trống.")
-                        yield AIPayloadSchema().model_dump()
+                        yield AIPayloadSchema(ai_active=False).model_dump()
                         window_start = time.monotonic()
                         max_confirmed_in_window = 0
 
@@ -597,6 +638,7 @@ class VisionAgent:
                 people_count=0,
                 anomaly_detected=False,
                 llm_alert="",
+                ai_active=self.is_active,
             )
 
         # Gọi LLM sinh cảnh báo
@@ -606,6 +648,7 @@ class VisionAgent:
             people_count=confirmed_count,
             anomaly_detected=True,
             llm_alert=alert_text,
+            ai_active=self.is_active,
         )
 
 

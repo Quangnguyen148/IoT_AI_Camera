@@ -68,7 +68,11 @@ class GatewayOrchestrator:
         self.mqtt_gateway = CoreIOTGatewayClient(
             config=cfg,
             state_store=self.state_store,
-            on_set_ai_status=self.set_ai_status,
+            on_set_ai_status=lambda s, **kw: self.set_ai_status(
+                s,
+                source=kw.get("source", "CoreIOT_RPC"),
+                sync_cloud=kw.get("sync_cloud", False),
+            ),
             on_get_ai_status=self.get_ai_status,
         )
 
@@ -78,15 +82,29 @@ class GatewayOrchestrator:
             config_manager=self.config_manager,
             state_store=self.state_store,
             get_frame_fn=self.get_latest_frame,
-            set_ai_status_fn=self.set_ai_status,
+            set_ai_status_fn=lambda s: self.set_ai_status(s, source="WebAPI", sync_cloud=True),
             get_ai_status_fn=self.get_ai_status,
         )
 
-    def set_ai_status(self, status: bool) -> None:
+    def set_ai_status(self, status: bool, source: str = "Local", sync_cloud: bool = True) -> None:
         status_bool = bool(status)
+        current_status = self.get_ai_status()
+        if status_bool == current_status:
+            logger.debug("[Gateway] Trạng thái AI không đổi (%s) từ %s – bỏ qua.", status_bool, source)
+            return
+
         if self._agent is not None:
             self._agent.set_ai_status(status_bool)
         self.state_store.set_ai_active(status_bool)
+        logger.info(
+            "[Gateway] Trạng thái AI đã chuyển sang: %s (Nguồn: %s | Agent=%s, StateStore=%s)",
+            "ACTIVE (BẬT)" if status_bool else "PAUSED (TẮT)",
+            source,
+            self._agent is not None,
+            True,
+        )
+        if sync_cloud and hasattr(self, "mqtt_gateway") and self.mqtt_gateway is not None:
+            self.mqtt_gateway.publish_ai_status(status_bool)
 
     def get_ai_status(self) -> bool:
         if self._agent is not None:
@@ -99,16 +117,18 @@ class GatewayOrchestrator:
         return None
 
     def _on_config_updated(self, new_cfg: GatewayConfig) -> None:
-        """Hot-reload thông số AI và kết nối MQTT khi lưu cấu hình từ T07."""
+        """Hot-reload thông số AI và kết nối MQTT an toàn khi lưu cấu hình từ T07."""
+        logger.info("[Gateway] Nhận tín hiệu cấu hình mới từ ConfigManager, bắt đầu hot-reload...")
         if self._agent is not None:
-            with self._agent._lock:
-                self._agent._causal_window_sec = new_cfg.causal_window_sec
-                self._agent._quarantine._conf_threshold = new_cfg.conf_threshold
-                self._agent._quarantine._min_frames = new_cfg.quarantine_frames
-                if new_cfg.gemini_api_key:
-                    self._agent._llm._api_key = new_cfg.gemini_api_key
-                    self._agent._llm._client = None
+            self._agent.update_config(
+                conf_threshold=new_cfg.conf_threshold,
+                quarantine_frames=new_cfg.quarantine_frames,
+                causal_window_sec=new_cfg.causal_window_sec,
+                gemini_api_key=new_cfg.gemini_api_key or None,
+                gemini_model=new_cfg.gemini_model,
+            )
         self.mqtt_gateway.reload(new_cfg)
+        logger.info("[Gateway] Quá trình hot-reload cấu hình hoàn tất thành công.")
 
     def _ai_worker_loop(self) -> None:
         """Luồng nhận kết quả từ VisionAgent (mỗi Causal Window 5s) và đẩy qua MQTT."""
@@ -120,7 +140,7 @@ class GatewayOrchestrator:
                     break
 
                 if not self.get_ai_status():
-                    payload = {"people_count": 0, "anomaly_detected": False, "llm_alert": ""}
+                    payload = {"people_count": 0, "anomaly_detected": False, "llm_alert": "", "ai_active": False}
                 else:
                     count = random.choice([0, 0, 1, 2])
                     payload = {
@@ -131,6 +151,7 @@ class GatewayOrchestrator:
                             if count > 0
                             else ""
                         ),
+                        "ai_active": True,
                     }
                 self.mqtt_gateway.publish_telemetry(payload)
             return

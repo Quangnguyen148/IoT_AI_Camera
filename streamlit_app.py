@@ -56,10 +56,11 @@ def fetch_logs(limit: int = 120) -> tuple[list[dict], list[dict]]:
 
 
 def send_ai_toggle(target_status: bool) -> bool:
+    """Gửi trạng thái tuyệt đối lên Gateway API (idempotent)."""
     try:
         res = requests.post(
             f"{API_BASE_URL}/api/ai/toggle",
-            json={"status": target_status},
+            json={"active": target_status, "status": target_status},
             timeout=2.0,
         )
         res.raise_for_status()
@@ -67,6 +68,13 @@ def send_ai_toggle(target_status: bool) -> bool:
     except Exception as exc:
         st.error(f"Không thể gửi lệnh tới Gateway ({API_BASE_URL}): {exc}")
         return False
+
+
+def on_ai_toggle_change() -> None:
+    """Callback chỉ chạy khi người dùng thực sự click vào nút toggle."""
+    target_status = st.session_state.ai_toggle
+    st.session_state.last_toggle_ts = time.time()
+    send_ai_toggle(target_status)
 
 
 # ── Lấy dữ liệu trạng thái & lịch sử ─────────────────────────────────────
@@ -80,6 +88,17 @@ people_count: int = int(latest_tel.get("people_count", 0))
 anomaly_detected: bool = bool(latest_tel.get("anomaly_detected", False))
 llm_alert: str = str(latest_tel.get("llm_alert", ""))
 
+# Khởi tạo và đồng bộ session_state có cơ chế cooldown chống ghi đè
+if "ai_toggle" not in st.session_state:
+    st.session_state.ai_toggle = ai_active
+if "last_toggle_ts" not in st.session_state:
+    st.session_state.last_toggle_ts = 0.0
+
+now_ts = time.time()
+# Cooldown 3.0 giây: Chỉ đồng bộ từ backend khi người dùng không vừa bấm nút gần đây
+if now_ts - st.session_state.last_toggle_ts > 3.0:
+    st.session_state.ai_toggle = ai_active
+
 # ── Sidebar Điều khiển ───────────────────────────────────────────────────
 with st.sidebar:
     st.header("Điều khiển Gateway")
@@ -90,15 +109,13 @@ with st.sidebar:
 
     st.divider()
     st.subheader("Module Edge AI (T09)")
-    new_ai_state = st.toggle(
+    st.toggle(
         "Kích hoạt nhận diện & cảnh báo AI",
-        value=ai_active,
+        key="ai_toggle",
+        on_change=on_ai_toggle_change,
         disabled=not backend_online,
         help="Đồng bộ trực tiếp với VisionAgent và lệnh RPC set_ai_status từ CoreIOT.",
     )
-    if backend_online and new_ai_state != ai_active:
-        if send_ai_toggle(new_ai_state):
-            st.rerun()
 
     st.divider()
     auto_refresh = st.checkbox("Tự động cập nhật (mỗi 2 giây)", value=True)

@@ -116,9 +116,98 @@ class TestIoTGatewayMember2(unittest.TestCase):
         self.gateway._handle_message(mock_client, None, msg_get)
         mock_client.publish.assert_any_call("v1/gateway/rpc/response/102", "false", qos=1)
 
+    def test_publish_ai_status_two_way_sync(self) -> None:
+        """Kiểm tra đồng bộ trạng thái AI lên CoreIOT Cloud qua Client Attributes và Telemetry."""
+        mock_client = MagicMock()
+        self.gateway._client = mock_client
+        self.gateway._connected = True
+
+        # Gọi đồng bộ trạng thái AI = True
+        self.gateway.publish_ai_status(True)
+        expected_attr = json.dumps({"Camera_AI_01": {"ai_active": True, "ai_status": True}}, ensure_ascii=False)
+        mock_client.publish.assert_any_call("v1/gateway/attributes", expected_attr, qos=1)
+
+        # Gọi đồng bộ trạng thái AI = False
+        self.gateway.publish_ai_status(False)
+        expected_attr_off = json.dumps({"Camera_AI_01": {"ai_active": False, "ai_status": False}}, ensure_ascii=False)
+        mock_client.publish.assert_any_call("v1/gateway/attributes", expected_attr_off, qos=1)
+
+    def test_direct_device_rpc_and_resilience(self) -> None:
+        """Kiểm tra RPC gửi trực tiếp tới Gateway (v1/devices/me/rpc/request/+) và khả năng chống crash khi gặp echo."""
+        mock_client = MagicMock()
+
+        # 1. Direct device RPC: v1/devices/me/rpc/request/201
+        msg_direct = MagicMock()
+        msg_direct.topic = "v1/devices/me/rpc/request/201"
+        msg_direct.payload = json.dumps({"method": "set_ai_status", "params": {"value": True}}).encode("utf-8")
+
+        self.gateway._handle_message(mock_client, None, msg_direct)
+        self.assertTrue(self.ai_state)
+        mock_client.publish.assert_any_call("v1/devices/me/rpc/response/201", "true", qos=1)
+
+        # 2. Bản tin echo phản hồi trên v1/gateway/rpc (data là boolean, không có method)
+        msg_echo = MagicMock()
+        msg_echo.topic = "v1/gateway/rpc"
+        msg_echo.payload = json.dumps({"device": "Camera_AI_01", "id": 101, "data": True}).encode("utf-8")
+
+        # Không được gây ra lỗi AttributeError hoặc exception
+        try:
+            self.gateway._handle_message(mock_client, None, msg_echo)
+        except Exception as exc:
+            self.fail(f"_handle_message không xử lý an toàn bản tin echo: {exc}")
+
+    def test_reload_config_no_deadlock(self) -> None:
+        """Kiểm tra reload cấu hình không bị deadlock ngay cả khi MQTT đang kết nối."""
+        mock_client = MagicMock()
+        self.gateway._client = mock_client
+        self.gateway._connected = True
+
+        # 1. Cập nhật chỉ cấu hình AI (không đổi MQTT) -> không cần reconnect
+        cfg_ai_only = self.cfg_mgr.get()
+        cfg_ai_only.conf_threshold = 0.85
+        self.gateway.reload(cfg_ai_only)
+        # client cũ vẫn được giữ nguyên
+        self.assertEqual(self.gateway._client, mock_client)
+
+        # 2. Cập nhật cấu hình MQTT -> reload an toàn, không block
+        cfg_mqtt = self.cfg_mgr.get()
+        cfg_mqtt.coreiot_host = "new.broker.io"
+        self.gateway.reload(cfg_mqtt)
+        # Hàm phải trả về ngay lập tức, không gây treo lock
+        self.assertEqual(self.gateway._config.coreiot_host, "new.broker.io")
+
+    def test_publish_ai_status_suppresses_duplicate_echo(self) -> None:
+        """Kiểm tra publish_ai_status tự động chặn phát trùng lặp (chống echo loop)."""
+        mock_client = MagicMock()
+        self.gateway._client = mock_client
+        self.gateway._connected = True
+
+        # Lần 1: publish True -> gọi MQTT client.publish
+        self.gateway.publish_ai_status(True)
+        call_count_1 = mock_client.publish.call_count
+
+        # Lần 2: tiếp tục publish True -> phải bị chặn (không tăng call_count)
+        self.gateway.publish_ai_status(True)
+        self.assertEqual(mock_client.publish.call_count, call_count_1)
+
+        # Lần 3: publish False -> trạng thái thay đổi, phải gọi MQTT client.publish
+        self.gateway.publish_ai_status(False)
+        self.assertGreater(mock_client.publish.call_count, call_count_1)
+
+    def test_telemetry_reads_realtime_ai_status(self) -> None:
+        """Kiểm tra Telemetry luôn đọc trạng thái AI thời gian thực, không bị đè giá trị cũ."""
+        self.ai_state = False
+        _, envelope = self.gateway.build_gateway_telemetry({
+            "people_count": 0,
+            "anomaly_detected": False,
+            "llm_alert": "",
+            "ai_active": True,  # Dữ liệu cũ trong payload
+        })
+        self.assertFalse(envelope["Camera_AI_01"][0]["values"]["ai_active"])
+
     @unittest.skipUnless(HAS_FASTAPI, "Cần cài đặt fastapi và httpx để kiểm thử Webserver")
     def test_webserver_endpoints_and_config_reload(self) -> None:
-        """Kiểm tra Webserver T07: API status, toggle AI và lưu cấu hình HTML."""
+        """Kiểm tra Webserver T07: API status, toggle AI idempotent và lưu cấu hình HTML."""
         app = create_web_app(
             config_manager=self.cfg_mgr,
             state_store=self.store,
@@ -133,10 +222,28 @@ class TestIoTGatewayMember2(unittest.TestCase):
         self.assertEqual(home_res.status_code, 200)
         self.assertIn("IoT Edge Gateway", home_res.text)
 
-        # Kiểm tra API bật/tắt AI
-        toggle_res = client.post("/api/ai/toggle", json={"status": False})
-        self.assertEqual(toggle_res.status_code, 200)
-        self.assertFalse(toggle_res.json()["ai_active"])
+        # Kiểm tra API bật/tắt AI với payload {"active": False}
+        toggle_res1 = client.post("/api/ai/toggle", json={"active": False})
+        self.assertEqual(toggle_res1.status_code, 200)
+        self.assertFalse(toggle_res1.json()["ai_active"])
+        self.assertFalse(self.ai_state)
+
+        # Kiểm tra tính Idempotent: gọi lại {"active": False} vẫn giữ nguyên False
+        toggle_res2 = client.post("/api/ai/toggle", json={"active": False})
+        self.assertEqual(toggle_res2.status_code, 200)
+        self.assertFalse(toggle_res2.json()["ai_active"])
+        self.assertFalse(self.ai_state)
+
+        # Kiểm tra bật lại với {"active": True}
+        toggle_res3 = client.post("/api/ai/toggle", json={"active": True})
+        self.assertEqual(toggle_res3.status_code, 200)
+        self.assertTrue(toggle_res3.json()["ai_active"])
+        self.assertTrue(self.ai_state)
+
+        # Kiểm tra blind toggle (không truyền payload)
+        toggle_res4 = client.post("/api/ai/toggle", json={})
+        self.assertEqual(toggle_res4.status_code, 200)
+        self.assertFalse(toggle_res4.json()["ai_active"])
         self.assertFalse(self.ai_state)
 
         # Kiểm tra lưu cấu hình qua form HTML
